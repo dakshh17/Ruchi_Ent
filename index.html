@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruchi Furniture Billing Suite</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --navy: #0f1f3d;
+      --deep-green: #0f3a31;
+      --gold: #d6b46f;
+      --gold-soft: #ecd9a9;
+      --bg: #f4f6fb;
+      --glass: rgba(255, 255, 255, 0.6);
+      --ink: #1b2430;
+      --muted: #5c6674;
+      --danger: #d94f4f;
+      --success: #2a9d66;
+      --shadow: 0 15px 40px rgba(15, 31, 61, 0.12);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(140deg, #0f1f3d 0%, #123f35 45%, #d6b46f 100%);
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .app-shell {
+      max-width: 1450px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .left-pane, .right-pane { padding: 18px; }
+
+    h1, h2, h3 { margin: 0; }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .brand-chip {
+      background: rgba(15, 31, 61, 0.9);
+      color: #fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      box-shadow: inset 0 0 0 1px rgba(214, 180, 111, 0.6);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.25px;
+    }
+
+    input, textarea, button, select {
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 31, 61, 0.16);
+      background: rgba(255, 255, 255, 0.85);
+      padding: 10px 12px;
+      color: var(--ink);
+      transition: all 0.22s ease;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: rgba(214, 180, 111, 0.95);
+      box-shadow: 0 0 0 4px rgba(214, 180, 111, 0.16);
+      transform: translateY(-1px);
+    }
+
+    textarea { resize: vertical; min-height: 65px; }
+
+    .btn {
+      background: linear-gradient(90deg, var(--navy), var(--deep-green));
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      box-shadow: 0 8px 20px rgba(15, 31, 61, 0.25);
+    }
+
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--navy);
+      border: 1px solid rgba(15, 31, 61, 0.2);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-danger {
+      background: rgba(217, 79, 79, 0.12);
+      color: #9b2929;
+      border-color: rgba(217, 79, 79, 0.38);
+    }
+
+    .line-items {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+
+    .line-item {
+      display: grid;
+      grid-template-columns: 1.6fr 0.6fr 0.8fr 0.8fr auto;
+      gap: 8px;
+      align-items: end;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(15, 31, 61, 0.12);
+      border-radius: 14px;
+      animation: slideIn 0.32s ease;
+    }
+
+    .line-item.removing {
+      animation: slideOut 0.25s ease forwards;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes slideOut {
+      to { opacity: 0; transform: translateX(30px) scale(0.96); max-height: 0; margin: 0; padding: 0; }
+    }
+
+    .line-item .total-chip {
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(15, 31, 61, 0.07);
+      font-weight: 700;
+      text-align: right;
+      min-width: 90px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(15, 31, 61, 0.22);
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    .toggle::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 2px;
+      left: 2px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform .2s;
+    }
+
+    .toggle.active { background: var(--success); }
+    .toggle.active::after { transform: translateX(20px); }
+
+    .totals-box {
+      margin-top: 10px;
+      background: rgba(15, 31, 61, 0.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 600;
+      display: grid;
+      gap: 6px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .totals-row.grand { font-size: 18px; color: var(--navy); }
+
+    .saved-products, .history {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15,31,61,0.14);
+    }
+
+    .saved-list, .history-list {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+      max-height: 170px;
+      overflow: auto;
+    }
+
+    .saved-item, .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 10px;
+      background: rgba(15, 31, 61, 0.06);
+      font-size: 13px;
+    }
+
+    .preview-shell {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid rgba(15, 31, 61, 0.2);
+      overflow: hidden;
+      min-height: 830px;
+    }
+
+    .bill-preview {
+      width: 100%;
+      max-width: 794px;
+      margin: 0 auto;
+      background: #fff;
+      color: #111;
+      padding: 24px;
+      min-height: 1123px;
+    }
+
+    .letterhead {
+      padding: 16px;
+      border-radius: 12px;
+      background: linear-gradient(120deg, #0f1f3d, #165b4b);
+      color: #fff;
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    .logo-placeholder {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 78px;
+      height: 78px;
+      border-radius: 10px;
+      border: 1px dashed rgba(255,255,255,.7);
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      text-align: center;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .logo-placeholder img { width: 100%; height: 100%; object-fit: cover; }
+
+    .letterhead h1 { font-size: 30px; letter-spacing: 1px; }
+    .letterhead p { margin: 4px 0; opacity: .95; }
+
+    .bill-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    .preview-table th, .preview-table td {
+      border: 1px solid #dbe2ee;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .preview-table th {
+      background: #f3f6fd;
+      color: #12345d;
+    }
+
+    .preview-footer {
+      margin-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .signature {
+      border-top: 1px solid #555;
+      padding-top: 4px;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .toast-area {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      display: grid;
+      gap: 8px;
+      z-index: 90;
+    }
+
+    .toast {
+      padding: 10px 14px;
+      border-radius: 10px;
+      color: white;
+      background: rgba(15,31,61,.94);
+      box-shadow: var(--shadow);
+      animation: pop .25s ease;
+      font-size: 13px;
+    }
+
+    @keyframes pop {
+      from {opacity: 0; transform: translateY(8px) scale(.95)}
+      to {opacity:1; transform: translateY(0) scale(1)}
+    }
+
+    @media (max-width: 1180px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .preview-shell { min-height: auto; }
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      .line-item { grid-template-columns: 1fr 1fr; }
+      .line-item .total-chip, .line-item .remove-btn { grid-column: span 2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <section class="card left-pane">
+      <div class="header">
+        <div>
+          <h2>Ruchi Furniture Billing</h2>
+          <small>Smart billing for glass & aluminum orders</small>
+        </div>
+        <span class="brand-chip">Professional Billing Suite</span>
+      </div>
+
+      <div class="grid">
+        <div class="field"><label>Bill Number</label><input id="billNumber" placeholder="RF-2026-001"></div>
+        <div class="field"><label>Date</label><input id="billDate" type="date"></div>
+        <div class="field"><label>Customer Name</label><input id="customerName" placeholder="Enter customer name"></div>
+        <div class="field"><label>Customer Address</label><textarea id="customerAddress" placeholder="Enter address"></textarea></div>
+      </div>
+
+      <div class="grid">
+        <div class="field"><label>Phone</label><input id="companyPhone" placeholder="+91 98XXXXXX"></div>
+        <div class="field"><label>Address</label><input id="companyAddress" placeholder="City, State"></div>
+      </div>
+
+      <div class="field" style="margin-bottom:10px;">
+        <label>Logo Upload (for bill letterhead)</label>
+        <input id="logoInput" type="file" accept="image/*">
+      </div>
+
+      <div class="toggle-wrap">
+        <div id="taxToggle" class="toggle"></div>
+        <label style="margin:0;">Apply GST / Tax</label>
+        <input id="taxRate" type="number" min="0" step="0.01" value="18" style="max-width:95px; display:none;" />
+      </div>
+
+      <div class="header" style="margin-top:6px; margin-bottom:8px;">
+        <h3>Line Items</h3>
+        <button id="addItemBtn" class="btn-outline">+ Add Item</button>
+      </div>
+
+      <div id="lineItems" class="line-items"></div>
+
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal</span><span id="subtotalDisplay">₹0.00</span></div>
+        <div class="totals-row"><span>Tax</span><span id="taxDisplay">₹0.00</span></div>
+        <div class="totals-row grand"><span>Grand Total</span><span id="grandDisplay">₹0.00</span></div>
+      </div>
+
+      <div class="actions">
+        <button id="saveBillBtn" class="btn">Save Bill</button>
+        <button id="exportPdfBtn" class="btn">Export PDF</button>
+        <button id="exportExcelBtn" class="btn">Export Excel</button>
+        <button id="resetBtn" class="btn-outline">Reset</button>
+      </div>
+
+      <div class="saved-products">
+        <div class="header" style="margin:0;"><h3>Saved Products</h3><button id="clearProductsBtn" class="btn-outline btn-danger">Clear All</button></div>
+        <div id="savedProductsList" class="saved-list"></div>
+      </div>
+
+      <div class="history">
+        <h3>Past Bills</h3>
+        <div id="historyList" class="history-list"></div>
+      </div>
+    </section>
+
+    <section class="card right-pane">
+      <div class="header">
+        <h2>Live Bill Preview</h2>
+      </div>
+      <div class="preview-shell">
+        <div id="billPreview" class="bill-preview">
+          <div class="letterhead">
+            <h1>RUCHI FURNITURE</h1>
+            <p>Glass Windows | Glass Doors | Aluminum Profiles</p>
+            <p id="previewCompanyContact">Phone: +91 XXXXXXXXXX | Address: City, State</p>
+            <div id="logoPreview" class="logo-placeholder">LOGO</div>
+          </div>
+          <div class="bill-meta">
+            <div><strong>Bill No:</strong> <span id="previewBillNo">-</span></div>
+            <div><strong>Date:</strong> <span id="previewDate">-</span></div>
+            <div><strong>Customer:</strong> <span id="previewCustomer">-</span></div>
+            <div><strong>Address:</strong> <span id="previewAddress">-</span></div>
+          </div>
+
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="previewItems"></tbody>
+          </table>
+
+          <div style="margin-top:14px; max-width:340px; margin-left:auto;">
+            <div class="totals-row"><span>Subtotal</span><span id="pSubtotal">₹0.00</span></div>
+            <div class="totals-row"><span>Tax</span><span id="pTax">₹0.00</span></div>
+            <div class="totals-row grand"><span>Grand Total</span><span id="pGrand">₹0.00</span></div>
+          </div>
+
+          <div class="preview-footer">
+            <div><strong>Thank you for choosing Ruchi Furniture!</strong><br>Quality Craftsmanship. Trusted Service.</div>
+            <div class="signature">Authorized Signature</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toastArea" class="toast-area"></div>
+
+  <script>
+    const STORAGE_PRODUCTS = 'ruchi_products';
+    const STORAGE_BILLS = 'ruchi_bills';
+    const STORAGE_LOGO = 'ruchi_logo';
+
+    const lineItemsEl = document.getElementById('lineItems');
+    const taxToggle = document.getElementById('taxToggle');
+    const taxRateInput = document.getElementById('taxRate');
+    const toastArea = document.getElementById('toastArea');
+    let applyTax = false;
+
+    const rupee = (val) => `₹${Number(val || 0).toFixed(2)}`;
+
+    const getSavedProducts = () => JSON.parse(localStorage.getItem(STORAGE_PRODUCTS) || '{}');
+    const setSavedProducts = (products) => localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(products));
+    const getBills = () => JSON.parse(localStorage.getItem(STORAGE_BILLS) || '[]');
+    const setBills = (bills) => localStorage.setItem(STORAGE_BILLS, JSON.stringify(bills));
+
+    const showToast = (msg, type='info') => {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      if(type === 'success') t.style.background = 'rgba(42,157,102,0.95)';
+      if(type === 'error') t.style.background = 'rgba(217,79,79,0.95)';
+      t.textContent = msg;
+      toastArea.appendChild(t);
+      setTimeout(() => t.remove(), 2600);
+    };
+
+    const createItemRow = (item = { product:'', quantity:1, unitPrice:0 }) => {
+      const row = document.createElement('div');
+      row.className = 'line-item';
+      const products = getSavedProducts();
+      const datalistId = `products-${Math.random().toString(36).slice(2)}`;
+
+      row.innerHTML = `
+        <div class="field">
+          <label>Product</label>
+          <input class="product-input" list="${datalistId}" value="${item.product || ''}" placeholder="e.g., Toughened Glass Window" />
+          <datalist id="${datalistId}">
+            ${Object.keys(products).map(p => `<option value="${p}"></option>`).join('')}
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input class="qty-input" type="number" min="0" step="1" value="${item.quantity ?? 1}" />
+        </div>
+        <div class="field">
+          <label>Unit Price</label>
+          <input class="price-input" type="number" min="0" step="0.01" value="${item.unitPrice ?? 0}" />
+        </div>
+        <div class="total-chip">₹0.00</div>
+        <button class="btn-outline btn-danger remove-btn">Remove</button>
+      `;
+
+      const productInput = row.querySelector('.product-input');
+      const qtyInput = row.querySelector('.qty-input');
+      const priceInput = row.querySelector('.price-input');
+      const totalChip = row.querySelector('.total-chip');
+
+      const recalcLine = () => {
+        const total = Number(qtyInput.value || 0) * Number(priceInput.value || 0);
+        totalChip.textContent = rupee(total);
+        renderAll();
+      };
+
+      productInput.addEventListener('change', () => {
+        const saved = getSavedProducts();
+        if (saved[productInput.value] != null && (!priceInput.value || Number(priceInput.value) === 0)) {
+          priceInput.value = saved[productInput.value];
+          showToast('Saved price auto-filled.', 'success');
+        }
+        recalcLine();
+      });
+
+      qtyInput.addEventListener('input', recalcLine);
+      priceInput.addEventListener('input', recalcLine);
+
+      row.querySelector('.remove-btn').addEventListener('click', () => {
+        row.classList.add('removing');
+        setTimeout(() => { row.remove(); renderAll(); }, 230);
+      });
+
+      recalcLine();
+      return row;
+    };
+
+    const addItem = (item) => lineItemsEl.appendChild(createItemRow(item));
+
+    const collectItems = () => {
+      const rows = [...document.querySelectorAll('.line-item')];
+      return rows.map(r => {
+        const product = r.querySelector('.product-input').value.trim();
+        const quantity = Number(r.querySelector('.qty-input').value || 0);
+        const unitPrice = Number(r.querySelector('.price-input').value || 0);
+        return { product, quantity, unitPrice, lineTotal: quantity * unitPrice };
+      }).filter(i => i.product || i.quantity || i.unitPrice);
+    };
+
+    const computeTotals = (items) => {
+      const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
+      const taxRate = applyTax ? Number(taxRateInput.value || 0) : 0;
+      const tax = subtotal * (taxRate / 100);
+      return { subtotal, tax, grand: subtotal + tax, taxRate };
+    };
+
+    const renderSavedProducts = () => {
+      const list = document.getElementById('savedProductsList');
+      const products = getSavedProducts();
+      list.innerHTML = '';
+      const entries = Object.entries(products);
+      if (!entries.length) {
+        list.innerHTML = '<small>No saved products yet.</small>';
+        return;
+      }
+      entries.forEach(([name, price]) => {
+        const el = document.createElement('div');
+        el.className = 'saved-item';
+        el.innerHTML = `<span><strong>${name}</strong> — ${rupee(price)}</span><button class="btn-outline btn-danger">Delete</button>`;
+        el.querySelector('button').onclick = () => {
+          const p = getSavedProducts();
+          delete p[name];
+          setSavedProducts(p);
+          renderSavedProducts();
+          showToast('Saved product deleted.', 'success');
+        };
+        list.appendChild(el);
+      });
+    };
+
+    const renderHistory = () => {
+      const list = document.getElementById('historyList');
+      const bills = getBills();
+      list.innerHTML = '';
+      if (!bills.length) {
+        list.innerHTML = '<small>No past bills found.</small>';
+        return;
+      }
+      bills.slice().reverse().forEach((bill) => {
+        const row = document.createElement('div');
+        row.className = 'history-item';
+        row.innerHTML = `
+          <span><strong>${bill.billNumber || '-'}</strong> | ${bill.customerName || '-'} | ${bill.date || '-'} | ${rupee(bill.totals.grand)}</span>
+          <button class="btn-outline">Load</button>
+        `;
+        row.querySelector('button').onclick = () => loadBill(bill);
+        list.appendChild(row);
+      });
+    };
+
+    const renderPreviewItems = (items) => {
+      const tbody = document.getElementById('previewItems');
+      tbody.innerHTML = items.length ? '' : '<tr><td colspan="5" style="text-align:center; color:#666;">No items added yet</td></tr>';
+      items.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${item.product || '-'}</td>
+          <td>${item.quantity}</td>
+          <td>${rupee(item.unitPrice)}</td>
+          <td>${rupee(item.lineTotal)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    };
+
+    const renderAll = () => {
+      const items = collectItems();
+      const totals = computeTotals(items);
+
+      document.getElementById('subtotalDisplay').textContent = rupee(totals.subtotal);
+      document.getElementById('taxDisplay').textContent = rupee(totals.tax);
+      document.getElementById('grandDisplay').textContent = rupee(totals.grand);
+
+      document.getElementById('previewBillNo').textContent = document.getElementById('billNumber').value || '-';
+      document.getElementById('previewDate').textContent = document.getElementById('billDate').value || '-';
+      document.getElementById('previewCustomer').textContent = document.getElementById('customerName').value || '-';
+      document.getElementById('previewAddress').textContent = document.getElementById('customerAddress').value || '-';
+
+      const phone = document.getElementById('companyPhone').value || '+91 XXXXXXXXXX';
+      const address = document.getElementById('companyAddress').value || 'City, State';
+      document.getElementById('previewCompanyContact').textContent = `Phone: ${phone} | Address: ${address}`;
+
+      renderPreviewItems(items);
+      document.getElementById('pSubtotal').textContent = rupee(totals.subtotal);
+      document.getElementById('pTax').textContent = `${applyTax ? `(${totals.taxRate}%) ` : ''}${rupee(totals.tax)}`;
+      document.getElementById('pGrand').textContent = rupee(totals.grand);
+
+      return { items, totals };
+    };
+
+    const rememberProducts = (items) => {
+      const products = getSavedProducts();
+      items.forEach(item => {
+        if (item.product && item.unitPrice > 0) {
+          products[item.product] = item.unitPrice;
+        }
+      });
+      setSavedProducts(products);
+      renderSavedProducts();
+    };
+
+    const currentBillData = () => {
+      const { items, totals } = renderAll();
+      return {
+        billNumber: document.getElementById('billNumber').value.trim(),
+        date: document.getElementById('billDate').value,
+        customerName: document.getElementById('customerName').value.trim(),
+        customerAddress: document.getElementById('customerAddress').value.trim(),
+        companyPhone: document.getElementById('companyPhone').value.trim(),
+        companyAddress: document.getElementById('companyAddress').value.trim(),
+        applyTax,
+        taxRate: Number(taxRateInput.value || 0),
+        items,
+        totals,
+        savedAt: new Date().toISOString()
+      };
+    };
+
+    const loadBill = (bill) => {
+      document.getElementById('billNumber').value = bill.billNumber || '';
+      document.getElementById('billDate').value = bill.date || '';
+      document.getElementById('customerName').value = bill.customerName || '';
+      document.getElementById('customerAddress').value = bill.customerAddress || '';
+      document.getElementById('companyPhone').value = bill.companyPhone || '';
+      document.getElementById('companyAddress').value = bill.companyAddress || '';
+      applyTax = !!bill.applyTax;
+      taxToggle.classList.toggle('active', applyTax);
+      taxRateInput.style.display = applyTax ? 'block' : 'none';
+      taxRateInput.value = bill.taxRate ?? 18;
+      lineItemsEl.innerHTML = '';
+      (bill.items || []).forEach(addItem);
+      if (!bill.items?.length) addItem();
+      renderAll();
+      showToast('Bill loaded from history.', 'success');
+    };
+
+    const saveBill = () => {
+      const bill = currentBillData();
+      if (!bill.items.length) {
+        showToast('Please add at least one line item.', 'error');
+        return;
+      }
+      if (!bill.billNumber) {
+        showToast('Bill number is required.', 'error');
+        return;
+      }
+      rememberProducts(bill.items);
+      const bills = getBills();
+      const filtered = bills.filter(b => b.billNumber !== bill.billNumber);
+      filtered.push(bill);
+      setBills(filtered);
+      renderHistory();
+      showToast('Bill saved successfully!', 'success');
+    };
+
+    const exportPDF = async () => {
+      const billNumber = document.getElementById('billNumber').value || 'ruchi-bill';
+      const element = document.getElementById('billPreview');
+      const options = {
+        margin: 0,
+        filename: `${billNumber}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
+      };
+      await html2pdf().set(options).from(element).save();
+      showToast('PDF exported.', 'success');
+    };
+
+    const exportExcel = () => {
+      const bill = currentBillData();
+      const wb = XLSX.utils.book_new();
+
+      const headerRows = [
+        ['RUCHI FURNITURE'],
+        ['Glass Windows | Glass Doors | Aluminum Profiles'],
+        [`Bill No: ${bill.billNumber}`],
+        [`Date: ${bill.date}`],
+        [`Customer: ${bill.customerName}`],
+        [`Address: ${bill.customerAddress}`],
+        []
+      ];
+
+      const itemRows = [
+        ['#', 'Product', 'Qty', 'Unit Price', 'Total'],
+        ...bill.items.map((it, i) => [i + 1, it.product, it.quantity, it.unitPrice, it.lineTotal]),
+        [],
+        ['Subtotal', '', '', '', bill.totals.subtotal],
+        ['Tax', '', '', '', bill.totals.tax],
+        ['Grand Total', '', '', '', bill.totals.grand]
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...itemRows]);
+      ws['!cols'] = [{wch:6}, {wch:35}, {wch:10}, {wch:14}, {wch:14}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Bill');
+      XLSX.writeFile(wb, `${bill.billNumber || 'ruchi-bill'}.xlsx`);
+      showToast('Excel exported.', 'success');
+    };
+
+    const setLogoFromStorage = () => {
+      const dataUrl = localStorage.getItem(STORAGE_LOGO);
+      if (!dataUrl) return;
+      document.getElementById('logoPreview').innerHTML = `<img src="${dataUrl}" alt="Logo">`;
+    };
+
+    document.getElementById('addItemBtn').addEventListener('click', () => addItem());
+    document.getElementById('saveBillBtn').addEventListener('click', saveBill);
+    document.getElementById('exportPdfBtn').addEventListener('click', exportPDF);
+    document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('billNumber').value = '';
+      document.getElementById('billDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('customerName').value = '';
+      document.getElementById('customerAddress').value = '';
+      lineItemsEl.innerHTML = '';
+      addItem();
+      renderAll();
+      showToast('Form reset.', 'success');
+    });
+
+    taxToggle.addEventListener('click', () => {
+      applyTax = !applyTax;
+      taxToggle.classList.toggle('active', applyTax);
+      taxRateInput.style.display = applyTax ? 'block' : 'none';
+      renderAll();
+    });
+
+    taxRateInput.addEventListener('input', renderAll);
+
+    ['billNumber', 'billDate', 'customerName', 'customerAddress', 'companyPhone', 'companyAddress'].forEach(id => {
+      document.getElementById(id).addEventListener('input', renderAll);
+    });
+
+    document.getElementById('clearProductsBtn').addEventListener('click', () => {
+      setSavedProducts({});
+      renderSavedProducts();
+      showToast('Saved products cleared.', 'success');
+    });
+
+    document.getElementById('logoInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        localStorage.setItem(STORAGE_LOGO, reader.result);
+        document.getElementById('logoPreview').innerHTML = `<img src="${reader.result}" alt="Logo">`;
+        showToast('Logo updated.', 'success');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Init
+    (() => {
+      document.getElementById('billDate').value = new Date().toISOString().slice(0, 10);
+      addItem();
+      renderSavedProducts();
+      renderHistory();
+      setLogoFromStorage();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
