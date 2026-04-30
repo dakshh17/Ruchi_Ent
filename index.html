@@ -388,6 +388,39 @@
       .line-item { grid-template-columns: 1fr 1fr; }
       .line-item .total-chip, .line-item .remove-btn { grid-column: span 2; }
     }
+
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body {
+        background: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .left-pane,
+      .right-pane > .header,
+      .toast-area {
+        display: none !important;
+      }
+      .app-shell,
+      .right-pane,
+      .card,
+      .preview-shell {
+        display: block !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        min-height: 0 !important;
+      }
+      .bill-preview {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        min-height: 0 !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -439,6 +472,7 @@
 
       <div class="actions">
         <button id="saveBillBtn" class="btn">Save Bill</button>
+        <button id="printBtn" class="btn">Print Bill</button>
         <button id="exportPdfBtn" class="btn">Export PDF</button>
         <button id="exportExcelBtn" class="btn">Export Excel</button>
         <button id="resetBtn" class="btn-outline">Reset</button>
@@ -811,6 +845,11 @@
 
     document.getElementById('addItemBtn').addEventListener('click', () => addItem());
     document.getElementById('saveBillBtn').addEventListener('click', saveBill);
+    document.getElementById('printBtn').addEventListener('click', () => {
+      renderAll();
+      window.print();
+      showToast('Print dialog opened.', 'success');
+    });
     document.getElementById('exportPdfBtn').addEventListener('click', exportPDF);
     document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
 
